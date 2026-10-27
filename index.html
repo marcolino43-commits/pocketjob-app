@@ -1687,9 +1687,9 @@ body:has(.founder){background:var(--adm-bg)}
 @keyframes b-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ---------- Stil wie apple.com: Übersicht ----------
-   Hellgrauer Grund (#F5F5F7, dunkel Schwarz), weiße Karten ohne Rahmen, mehr Luft zwischen den Bereichen,
-   Die Leiste unten bleibt deckend (A.3: kein backdrop-filter). Bei hohem Kontrast bleiben alle Rahmen. */
-body:not(.is-admin){--bg:#F5F5F7}
+   Weißer Grund (Wunsch des Inhabers vom 27.10.2026, vorher #F5F5F7; dunkel Schwarz), weiße Karten mit feinem Rand (css-teen3.css),
+   mehr Luft zwischen den Bereichen. Die Leiste unten bleibt deckend (A.3: kein backdrop-filter). Bei hohem Kontrast bleiben alle Rahmen. */
+body:not(.is-admin){--bg:#FFFFFF}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body:not(.is-admin){--bg:#000000}}
 :root[data-theme="dark"] body:not(.is-admin){--bg:#000000}
 .phone{gap:var(--sp-5)}
@@ -1952,7 +1952,7 @@ html.ios{
   --f7-theme-color:var(--f7-ios-primary); --f7-theme-color-rgb:var(--f7-ios-primary-rgb);
   --f7-theme-color-shade:var(--f7-ios-primary-shade); --f7-theme-color-tint:var(--f7-ios-primary-tint)}
 html.ios.dark{--f7-ios-primary:#FF9F0A; --f7-ios-primary-rgb:255, 159, 10; --f7-ios-primary-shade:#E08A00; --f7-ios-primary-tint:#FFB340}
-/* Werte, die auf unsere Tokens zeigen, stehen am body: dort gilt --bg der App (#F5F5F7, dunkel #000) */
+/* Werte, die auf unsere Tokens zeigen, stehen am body: dort gilt --bg der App (#FFFFFF, dunkel #000) */
 html.ios body{
   --f7-font-family:var(--font-body); --f7-text-color:var(--fg); --f7-page-bg-color:var(--bg);
   --f7-list-inset-side-margin:0px; --f7-card-margin-horizontal:0px; --f7-card-margin-vertical:0px;
@@ -1970,6 +1970,10 @@ html.ios.dark body{--f7-button-fill-text-color:#111111; --f7-list-strong-bg-colo
 /* Hoher Kontrast: Ränder um Listen und Karten, dunklere Nebentexte */
 html.ios[data-contrast="high"]{--f7-list-item-footer-text-color:var(--fg); --f7-list-item-after-text-color:var(--fg); --f7-card-box-shadow:0 0 0 2px var(--fg)}
 html.ios[data-contrast="high"] .pj .f7-list.f7-inset ul{box-shadow:0 0 0 2px var(--fg)}
+/* Weißer Grund: weiße Flächen direkt darauf bekommen einen feinen Rand und wenig Schatten (Rand per box-shadow, damit sich nichts verschiebt).
+   Bei hohem Kontrast gelten die Rahmen oben, dunkel liegen die Flächen ohnehin heller auf Schwarz. */
+html.ios:not(.dark):not([data-contrast="high"]) :is(.pj, #sheet) :is(.f7-card, .f7-list.f7-inset > ul, .card, .msg, .perk, .rules, .pj-rules, .pj-bubble, details.learn, dl.kv, .cnt, .pj-cat, .pj-fold > summary):not(.f7-segmented-highlight){
+  box-shadow:0 0 0 1px var(--line), var(--e-1)}
 html.ios{scroll-padding-top:76px}
 html.ios body{background:var(--f7-page-bg-color);color:var(--f7-text-color);-webkit-font-smoothing:antialiased}
 
@@ -5978,17 +5982,21 @@ const tk = s => s;
 /* Altersgruppe am Tag s: "14-15" (unter 16), "16-17" (unter 18) oder "18-20" */
 function ageBand(t, s = TISO){ const a = ageOn(t.birth, s); return a < 16 ? "14-15" : a < 18 ? "16-17" : "18-20"; }
 
-/* → void. Setzt an <html> data-theme ("light"/"dark", sonst entfernt) und data-motion="reduce"; blendet fremde stehende Hinweise aus.
+/* Darstellung: "light" (Standard, Wunsch des Inhabers vom 27.10.2026: immer hell mit weißem Grund), "dark" oder "auto" (wie das Handy) */
+const uiTheme = () => S && S.ui && (S.ui.theme === "dark" || S.ui.theme === "auto") ? S.ui.theme : "light";
+/* → void. Setzt an <html> data-theme ("light"/"dark", bei „auto“ entfernt) und data-motion="reduce"; blendet fremde stehende Hinweise aus.
    Aufrufen am Anfang von teenView, adminView, formView und founderView (läuft zusätzlich nach jedem Zeichnen von #app). */
 function syncRoot(){
   if (!S) return;
-  const root = document.documentElement, ui = S.ui || (S.ui = {});
-  if (ui.theme === "light" || ui.theme === "dark") root.dataset.theme = ui.theme; else delete root.dataset.theme;
+  const root = document.documentElement, ui = S.ui || (S.ui = {}), th = uiTheme();
+  if (th === "auto") delete root.dataset.theme; else root.dataset.theme = th;
   if (ui.motion) root.dataset.motion = "reduce"; else delete root.dataset.motion;
   /* Framework7 (iOS) nur in der App der Jugendlichen; „dark“ folgt der Darstellung (Automatisch = Handy) */
-  const dark = ui.theme === "dark" || (ui.theme !== "light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark = th === "dark" || (th === "auto" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
   root.classList.toggle("ios", S.view === "teen");
   root.classList.toggle("dark", S.view === "teen" && dark);
+  /* Leiste des Browsers in der Farbe der Darstellung, nicht des Handys (beide Meta-Angaben, auch die mit media) */
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = !dark ? "#FFFFFF" : S.view === "teen" ? "#000000" : "#0B0B0D";
   toastSync();
 }
 if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => syncRoot());
@@ -6774,7 +6782,7 @@ SUB.datenschutz = t => `${sec(T("Datenschutz einfach erklärt"))}<div class="car
 /* Barrierefreiheit (B.10): Darstellung, Bewegung, Schrift und Kontrast, Erklärung zur Barrierefreiheit mit allen Pflichtteilen */
 const A11Y_DATE = "2026-10-20";
 SUB.barriere = t => {
-  const g = gOf(t), th = S.ui.theme === "light" || S.ui.theme === "dark" ? S.ui.theme : "auto";
+  const g = gOf(t), th = uiTheme();
   return `${sec(T("Barrierefreiheit"))}
   <div class="card col"><b id="ui-th">${T("Darstellung")}</b><div class="fchips" role="group" aria-labelledby="ui-th">
     ${[["auto", T("Automatisch"), "a11y"], ["light", T("Hell"), "sun"], ["dark", T("Dunkel"), "eye"]].map(([v, l, i]) => `<button class="fchip" data-act="ui-theme" data-v="${v}" aria-pressed="${th === v}">${l}</button>`).join("")}</div></div>
